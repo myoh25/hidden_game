@@ -1,130 +1,594 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>😎퍼즐 고수를 위한 도전</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- 고운바탕 폰트 -->
-  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang&display=swap" rel="stylesheet">
-  <style>
-    body { font-family:'Gowun Batang', serif; background: linear-gradient(135deg, #ffe4e1, #fff0f5); display: flex; flex-direction: column; align-items: center; padding: 1rem; margin: 0; }
-    h1 { margin-bottom: 1rem; color: #d57fa8; font-size: 1.8rem; }
-    #modeSelect { text-align: center; margin-bottom: 1rem; }
-    .mode-label { font-size: 1.1rem; color: #743388; margin-bottom: .5rem; }
-    .mode-btn { padding: .6rem 1rem; background: #f8bebe; color: #fff; border: none; border-radius: 20px; cursor: pointer; margin: 0 .25rem; transition: transform .2s; display: inline-block; }
-    .mode-btn.selected { background: IndianRed; transform: scale(1.05); }
-    #startBtn, #shuffleBtn { padding: .8rem 1.6rem; background: #d57fa8; color: #fff; border: none; border-radius: 24px; cursor: pointer; margin: .5rem auto; display: block; transition: transform .2s; }
-    #startBtn:hover, #shuffleBtn:hover { transform: scale(1.05); }
-    #justGuestbookBtn { padding: .6rem 1rem; background: #000; color: #fff; border: none; border-radius: 20px; cursor: pointer; margin-top: 1rem; display: block; }
-    #puzzleCanvas { width: 100%; max-width: 360px; aspect-ratio: 1/1; border: 4px solid #f8c8dc; border-radius: 12px; background: #fff; }
-    #timer { margin: .8rem 0; font-size: 1.4rem; color: #d57fa8; font-weight:700; }
-    #message { margin: 1rem 0; font-size:1.2rem; color: #d57fa8; font-weight:700; }
-    section { width:100%; max-width:360px; margin-top:1.5rem; background:#fff; border-radius:12px; padding:1rem; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
-    section h2 { font-size:1.2rem; color:#d57fa8; text-align:center; margin-bottom:.5rem; }
-    #guestbookList p { display:flex; justify-content:space-between; margin:.6rem 0; }
-    .deleteBtn { background:transparent; border:none; color:#e07090; cursor:pointer; }
-    #rankingTable { width:100%; border-collapse:collapse; }
-    #rankingTable th, #rankingTable td { border:1px solid #eee; padding:.6rem; text-align:center; }
-    .modal { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(255,255,255,0.9); display:none; justify-content:center; align-items:center; z-index:1000; }
-    .modal-content { background:#fff; padding:1rem; border-radius:12px; display:flex; flex-direction:column; gap:.5rem; width:80%; max-width:320px; }
-    .modal-content input, .modal-content textarea, .modal-content button { font-family:'Gowun Batang', serif; }
-    .modal-close { background:#ccc !important; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퍼즐 고수를 위한 도전</title>
+    <!-- Gowun Batang Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang&display=swap" rel="stylesheet">
+    <style>
+        /* CSS 변수를 사용하여 색상 관리 용이성 증대 */
+        :root {
+            --primary-color: #d57fa8;
+            --secondary-color: #f8bebe;
+            --light-pink-bg: #fff0f5;
+            --border-color: #f8c8dc;
+            --text-color: #743388;
+            --white-color: #fff;
+            --dark-color: #000;
+            --success-color: #4CAF50;
+            --error-color: #f44336;
+        }
+
+        body {
+            font-family: 'Gowun Batang', serif;
+            background: linear-gradient(135deg, #ffe4e1, var(--light-pink-bg));
+            margin: 0;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-color);
+        }
+
+        h1 {
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+            font-size: 1.8rem;
+            text-shadow: 1px 1px 2px var(--white-color);
+        }
+
+        /* 컨트롤 영역 레이아웃 개선 */
+        #controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+            max-width: 360px;
+            margin-bottom: 1rem;
+        }
+
+        #modeSelect {
+            text-align: center;
+        }
+
+        .mode-label {
+            font-size: 1.1rem;
+            margin-bottom: .5rem;
+        }
+
+        .btn {
+            padding: .6rem 1rem;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: transform .2s, box-shadow .2s;
+            font-family: 'Gowun Batang', serif;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .mode-btn {
+            background: var(--secondary-color);
+            color: var(--white-color);
+            margin: 0 .25rem;
+        }
+
+        .mode-btn.selected {
+            background: IndianRed;
+            transform: scale(1.1);
+            font-weight: bold;
+        }
+
+        #startBtn, #restartBtn {
+            width: 100%; /* 부모 요소 너비에 맞춤 */
+            padding: .8rem 1.6rem;
+            background: var(--primary-color);
+            color: var(--white-color);
+            border-radius: 24px;
+            font-size: 1.1rem;
+        }
+
+        #justGuestbookBtn {
+            background: var(--dark-color);
+            color: var(--white-color);
+        }
+
+        #puzzleCanvas {
+            width: 100%;
+            max-width: 360px;
+            aspect-ratio: 1 / 1;
+            border: 4px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--white-color);
+            touch-action: none; /* 모바일 터치 스크롤 방지 */
+            margin-bottom: 1rem;
+        }
+
+        #timer {
+            margin: .5rem 0;
+            font-size: 1.6rem;
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        #message {
+            margin: .5rem 0;
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            font-weight: 700;
+            min-height: 1.5em; /* 메시지 영역 높이 고정 */
+            text-align: center;
+        }
+
+        section {
+            width: 100%;
+            max-width: 360px;
+            margin-top: 1.5rem;
+            background: var(--white-color);
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        section h2 {
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: .5rem;
+        }
+
+        #guestbookList p {
+            display: flex;
+            justify-content: space-between;
+            margin: .6rem 0;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+
+        #rankingTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #rankingTable th, #rankingTable td {
+            border: 1px solid #eee;
+            padding: .6rem;
+            text-align: center;
+        }
+        
+        /* 로딩 및 에러 메시지 스타일 */
+        .status-message {
+            text-align: center;
+            padding: 1rem;
+            color: #888;
+        }
+
+        /* 모달 스타일 개선 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none; /* 기본 숨김 */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background: var(--white-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: .75rem;
+            width: 90%;
+            max-width: 320px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .modal-content h3 {
+            margin: 0;
+            text-align: center;
+            color: var(--primary-color);
+        }
+
+        .modal-content input, .modal-content textarea {
+            font-family: 'Gowun Batang', serif;
+            padding: 0.5rem;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .modal-content button {
+            padding: 0.75rem;
+            font-size: 1rem;
+        }
+
+        #gbSubmit {
+            background-color: var(--primary-color);
+            color: var(--white-color);
+        }
+
+        .modal-close {
+            background: #ccc !important;
+        }
+        
+        /* 개발자 도구 버튼 숨김 */
+        #devBtn { display: none; }
+    </style>
 </head>
 <body>
-  <h1>퍼즐 고수를 위한 도전</h1>
-  <div id="modeSelect">
-    <div class="mode-label">난이도를 선택한 후 시작하기를 눌러주세요😗</div>
-    <button class="mode-btn selected" id="mode4Btn">고수 (4×4)</button>
-    <button class="mode-btn" id="mode5Btn">초고수 (5×5)</button>
-  </div>
-  <button id="startBtn">시작하기</button>
-  <div id="timer">00:00.00</div>
-  <canvas id="puzzleCanvas"></canvas>
-  <button id="shuffleBtn">다시 섞기</button>
-  <button id="justGuestbookBtn">😫그냥 방명록만 쓸래요</button>
-  <section id="guestbookSection">
-    <h2>방명록</h2>
-    <div id="guestbookList"></div>
-  </section>
-  <section id="rankingSection">
-    <h2>랭킹 리스트</h2>
-    <table id="rankingTable"><thead><tr><th>순위</th><th>이름</th><th>기록(초)</th></tr></thead><tbody></tbody></table>
-  </section>
-  <button id="devBtn">개발자 도구</button>
-  <div id="guestbookModal" class="modal">
-    <div class="modal-content">
-      <h3>방명록 작성</h3>
-      <input type="text" id="gbName" placeholder="이름 (최대 10자)" maxlength="10">
-      <textarea id="gbMsg" placeholder="메시지 (15자)" maxlength="15"></textarea>
-      <button id="gbSubmit">등록</button>
-      <button id="gbCancel" class="modal-close">취소</button>
+    <h1>퍼즐 고수를 위한 도전</h1>
+
+    <div id="controls">
+        <div id="modeSelect">
+            <div class="mode-label">난이도를 선택한 후 시작하기를 눌러주세요</div>
+            <button class="btn mode-btn selected" data-size="4">고수 (4×4)</button>
+            <button class="btn mode-btn" data-size="5">초고수 (5×5)</button>
+        </div>
+        <button id="startBtn" class="btn">시작하기</button>
     </div>
-  </div>
-  <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbwiaJZx-i7jleHhLLPLgsBOvT308q0iTvgUamNwL6K47fwhiaEszitRW49TOGA6u1He/exec';
-    let entries = [];
-    let bypassRanking = false;
-    // DOM ready: fetch shared entries
-    document.addEventListener('DOMContentLoaded', () => {
-      resizeCanvas(); adjustStartWidth(); draw();
-      fetchEntries();
-    });
 
-    async function fetchEntries() {
-      try {
-        const res = await fetch(API_URL);
-        const data = await res.json();
-        entries = data;
-        renderGuestbook(); renderRanking();
-      } catch (e) { console.error(e); }
-    }
+    <div id="timer">00:00.00</div>
+    <canvas id="puzzleCanvas"></canvas>
+    <button id="restartBtn" class="btn">다시 섞기</button>
+    <div id="message"></div>
+    <button id="justGuestbookBtn" class="btn">😫그냥 방명록만 쓸래요</button>
 
-    async function postEntry(entry) {
-      try {
-        await fetch(API_URL, {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify(entry)
+    <section id="guestbookSection">
+        <h2>방명록</h2>
+        <div id="guestbookList">
+            <p class="status-message">방명록을 불러오는 중...</p>
+        </div>
+    </section>
+
+    <section id="rankingSection">
+        <h2>랭킹 리스트</h2>
+        <table id="rankingTable">
+            <thead><tr><th>순위</th><th>이름</th><th>기록(초)</th></tr></thead>
+            <tbody>
+                <tr><td colspan="3" class="status-message">랭킹을 불러오는 중...</td></tr>
+            </tbody>
+        </table>
+    </section>
+    
+    <button id="devBtn">개발자 도구</button>
+
+    <!-- 방명록 작성 모달 -->
+    <div id="guestbookModal" class="modal">
+        <div class="modal-content">
+            <h3>방명록 작성</h3>
+            <input type="text" id="gbName" placeholder="이름 (최대 10자)" maxlength="10">
+            <textarea id="gbMsg" placeholder="메시지 (최대 15자)" maxlength="15" rows="3"></textarea>
+            <button id="gbSubmit" class="btn">등록</button>
+            <button class="btn modal-close">취소</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 상수 및 상태 관리 ---
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwiaJZx-i7jleHhLLPLgsBOvT308q0iTvgUamNwL6K47fwhiaEszitRW49TOGA6u1He/exec';
+        const img = new Image();
+        img.src = 'https://cdn.jsdelivr.net/gh/myoh25/1/puzzle-hidden.jpg';
+
+        const state = {
+            puzzleSize: 4,
+            tiles: [],
+            emptyPos: { r: 0, c: 0 },
+            isGameStarted: false,
+            startTime: 0,
+            timerInterval: null,
+            bypassRanking: false,
+        };
+
+        // --- DOM 요소 캐싱 ---
+        const DOMElements = {
+            canvas: document.getElementById('puzzleCanvas'),
+            ctx: document.getElementById('puzzleCanvas').getContext('2d'),
+            modeButtons: document.querySelectorAll('.mode-btn'),
+            startBtn: document.getElementById('startBtn'),
+            restartBtn: document.getElementById('restartBtn'),
+            justGuestbookBtn: document.getElementById('justGuestbookBtn'),
+            timer: document.getElementById('timer'),
+            message: document.getElementById('message'),
+            guestbookList: document.getElementById('guestbookList'),
+            rankingBody: document.querySelector('#rankingTable tbody'),
+            guestbookModal: document.getElementById('guestbookModal'),
+            gbName: document.getElementById('gbName'),
+            gbMsg: document.getElementById('gbMsg'),
+            gbSubmit: document.getElementById('gbSubmit'),
+            modalCloseButtons: document.querySelectorAll('.modal-close'),
+        };
+
+        // --- 게임 로직 ---
+        function initGame(shuffled = false) {
+            state.tiles = [];
+            state.emptyPos = { r: state.puzzleSize - 1, c: state.puzzleSize - 1 };
+            
+            for (let r = 0; r < state.puzzleSize; r++) {
+                state.tiles[r] = [];
+                for (let c = 0; c < state.puzzleSize; c++) {
+                    state.tiles[r][c] = { r, c };
+                }
+            }
+            state.tiles[state.puzzleSize - 1][state.puzzleSize - 1] = null;
+
+            if (shuffled) {
+                shuffle();
+            }
+            draw();
+        }
+
+        function shuffle() {
+            const dirs = [{ r: -1, c: 0 }, { r: 1, c: 0 }, { r: 0, c: -1 }, { r: 0, c: 1 }];
+            for (let i = 0; i < 1000; i++) {
+                const validMoves = dirs
+                    .map(d => ({ r: state.emptyPos.r + d.r, c: state.emptyPos.c + d.c }))
+                    .filter(p => p.r >= 0 && p.r < state.puzzleSize && p.c >= 0 && p.c < state.puzzleSize);
+                const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+                // moveTile은 빈 칸의 '이웃'을 클릭했을 때의 로직이므로, 여기서는 직접 위치를 바꿉니다.
+                state.tiles[state.emptyPos.r][state.emptyPos.c] = state.tiles[randomMove.r][randomMove.c];
+                state.tiles[randomMove.r][randomMove.c] = null;
+                state.emptyPos = randomMove;
+            }
+        }
+
+        function moveTile(r, c) {
+            if (!state.isGameStarted) return;
+            // 빈 칸과 인접한지 확인 (맨해튼 거리 1)
+            if (Math.abs(r - state.emptyPos.r) + Math.abs(c - state.emptyPos.c) === 1) {
+                state.tiles[state.emptyPos.r][state.emptyPos.c] = state.tiles[r][c];
+                state.tiles[r][c] = null;
+                state.emptyPos = { r, c };
+                draw();
+                if (checkComplete()) {
+                    onComplete();
+                }
+            }
+        }
+
+        function draw() {
+            const { canvas, ctx } = DOMElements;
+            const w = canvas.width / state.puzzleSize;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let r = 0; r < state.puzzleSize; r++) {
+                for (let c = 0; c < state.puzzleSize; c++) {
+                    const tile = state.tiles[r][c];
+                    if (tile) {
+                        ctx.drawImage(
+                            img,
+                            tile.c * img.width / state.puzzleSize,
+                            tile.r * img.height / state.puzzleSize,
+                            img.width / state.puzzleSize,
+                            img.height / state.puzzleSize,
+                            c * w, r * w, w, w
+                        );
+                        ctx.strokeStyle = '#f8c8dc';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(c * w + 1, r * w + 1, w - 2, w - 2);
+                    }
+                }
+            }
+        }
+
+        function checkComplete() {
+            if (!state.isGameStarted) return false;
+            for (let r = 0; r < state.puzzleSize; r++) {
+                for (let c = 0; c < state.puzzleSize; c++) {
+                    const tile = state.tiles[r][c];
+                    if (r === state.puzzleSize - 1 && c === state.puzzleSize - 1) {
+                        if (tile !== null) return false;
+                    } else {
+                        if (!tile || tile.r !== r || tile.c !== c) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function startGame() {
+            state.isGameStarted = true;
+            DOMElements.message.textContent = '';
+            initGame(true); // 섞어서 게임 시작
+            
+            state.startTime = Date.now();
+            clearInterval(state.timerInterval);
+            state.timerInterval = setInterval(updateTimer, 10);
+            DOMElements.startBtn.textContent = '게임 중...';
+            DOMElements.startBtn.disabled = true;
+        }
+
+        function onComplete() {
+            clearInterval(state.timerInterval);
+            state.isGameStarted = false;
+            DOMElements.message.textContent = '🎉 성공! 도전 완료 🎉';
+            DOMElements.startBtn.textContent = '시작하기';
+            DOMElements.startBtn.disabled = false;
+            draw(); // 완성된 그림을 다시 한번 그려줌
+            showGuestbookModal();
+        }
+
+        // --- UI 및 유틸리티 함수 ---
+        function updateTimer() {
+            const diff = Date.now() - state.startTime;
+            DOMElements.timer.textContent = formatTime(diff);
+        }
+        
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+            const seconds = String(totalSeconds % 60).padStart(2, '0');
+            const milliseconds = String(ms % 1000).padStart(3, '0').substring(0, 2);
+            return `${minutes}:${seconds}.${milliseconds}`;
+        }
+
+        function resizeCanvas() {
+            const w = DOMElements.canvas.clientWidth;
+            DOMElements.canvas.width = w;
+            DOMElements.canvas.height = w;
+            draw();
+        }
+
+        function showGuestbookModal() {
+            DOMElements.guestbookModal.style.display = 'flex';
+            DOMElements.gbName.value = '';
+            DOMElements.gbMsg.value = '';
+        }
+
+        function hideGuestbookModal() {
+            DOMElements.guestbookModal.style.display = 'none';
+        }
+
+        // --- 서버 통신 ---
+        async function fetchEntries() {
+            try {
+                const res = await fetch(API_URL);
+                if (!res.ok) throw new Error(`서버 응답 오류: ${res.status}`);
+                const entries = await res.json();
+                renderGuestbook(entries);
+                renderRanking(entries);
+            } catch (e) {
+                console.error('데이터 로딩 실패:', e);
+                DOMElements.guestbookList.innerHTML = `<p class="status-message error-message">데이터 로딩에 실패했습니다.</p>`;
+                DOMElements.rankingBody.innerHTML = `<tr><td colspan="3" class="status-message error-message">데이터 로딩에 실패했습니다.</td></tr>`;
+            }
+        }
+
+        async function postEntry(entry) {
+            DOMElements.gbSubmit.textContent = '등록 중...';
+            DOMElements.gbSubmit.disabled = true;
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // GAS 웹앱 POST 시 필요
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(entry)
+                });
+                // no-cors 모드에서는 응답을 읽을 수 없으므로, 성공으로 간주하고 데이터를 다시 불러옴
+                await fetchEntries();
+            } catch (e) {
+                console.error('데이터 전송 실패:', e);
+                alert('등록에 실패했습니다. 다시 시도해주세요.'); // alert 대신 커스텀 모달로 개선 가능
+            } finally {
+                hideGuestbookModal();
+                DOMElements.gbSubmit.textContent = '등록';
+                DOMElements.gbSubmit.disabled = false;
+            }
+        }
+
+        // --- 데이터 렌더링 ---
+        function renderGuestbook(entries) {
+            const list = DOMElements.guestbookList;
+            list.innerHTML = '';
+            if (!entries || entries.length === 0) {
+                list.innerHTML = `<p class="status-message">아직 방명록이 없어요.</p>`;
+                return;
+            }
+            // 최신순으로 정렬
+            [...entries].sort((a, b) => new Date(b.time) - new Date(a.time)).forEach(e => {
+                const p = document.createElement('p');
+                const date = new Date(e.time).toLocaleString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                p.innerHTML = `<span><strong>${e.name}</strong>: ${e.msg}</span><span style="color:#999; font-size:0.8em;">${date}</span>`;
+                list.appendChild(p);
+            });
+        }
+
+        function renderRanking(entries) {
+            const tbody = DOMElements.rankingBody;
+            tbody.innerHTML = '';
+            const rankedEntries = entries.filter(e => !e.skip && e.record);
+            
+            if (rankedEntries.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="status-message">아직 랭킹 기록이 없어요.</td></tr>`;
+                return;
+            }
+
+            rankedEntries.sort((a, b) => parseFloat(a.record) - parseFloat(b.record)).forEach((e, i) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${i + 1}</td><td>${e.name}</td><td>${e.record}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- 이벤트 리스너 설정 ---
+        function setupEventListeners() {
+            img.onload = () => {
+                resizeCanvas();
+                initGame(false); // 처음에는 섞지 않은 상태로 시작
+            };
+
+            window.addEventListener('resize', resizeCanvas);
+
+            DOMElements.modeButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (state.isGameStarted) return;
+                    DOMElements.modeButtons.forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    state.puzzleSize = parseInt(btn.dataset.size, 10);
+                    initGame(false);
+                });
+            });
+
+            DOMElements.startBtn.addEventListener('click', startGame);
+            DOMElements.restartBtn.addEventListener('click', () => {
+                clearInterval(state.timerInterval);
+                state.isGameStarted = false;
+                DOMElements.timer.textContent = '00:00.00';
+                DOMElements.message.textContent = '';
+                DOMElements.startBtn.textContent = '시작하기';
+                DOMElements.startBtn.disabled = false;
+                initGame(false); // 다시 섞지 않은 상태로 초기화
+            });
+
+            DOMElements.canvas.addEventListener('click', (e) => {
+                const rect = DOMElements.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const tileSize = DOMElements.canvas.width / state.puzzleSize;
+                const c = Math.floor(x / tileSize);
+                const r = Math.floor(y / tileSize);
+                moveTile(r, c);
+            });
+            
+            DOMElements.justGuestbookBtn.addEventListener('click', () => {
+                state.bypassRanking = true;
+                showGuestbookModal();
+            });
+
+            DOMElements.gbSubmit.addEventListener('click', () => {
+                const name = DOMElements.gbName.value.trim();
+                const msg = DOMElements.gbMsg.value.trim();
+                if (!name || !msg) {
+                    alert('이름과 메시지를 모두 입력해주세요.');
+                    return;
+                }
+                
+                const record = state.isGameStarted || state.bypassRanking ? ((Date.now() - state.startTime) / 1000).toFixed(2) : 0;
+                
+                postEntry({ name, msg, record, skip: state.bypassRanking });
+                state.bypassRanking = false; // 상태 초기화
+            });
+
+            DOMElements.modalCloseButtons.forEach(btn => btn.addEventListener('click', hideGuestbookModal));
+        }
+
+        // --- 초기화 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            fetchEntries();
         });
-        await fetchEntries();
-      } catch(e) { console.error(e); }
-    }
-
-    // Puzzle logic
-    const img = new Image(); img.src = 'https://cdn.jsdelivr.net/gh/myoh25/1/puzzle-hidden.jpg';
-    let puzzleSize = 4; const mode4Btn = document.getElementById('mode4Btn'), mode5Btn = document.getElementById('mode5Btn');
-    const startBtn = document.getElementById('startBtn'), shuffleBtn = document.getElementById('shuffleBtn');
-    const justBtn = document.getElementById('justGuestbookBtn'), devBtn = document.getElementById('devBtn');
-    const canvas = document.getElementById('puzzleCanvas'), ctx = canvas.getContext('2d');
-    let tiles, emptyPos, timerInterval, startTime;
-    function adjustStartWidth() { startBtn.style.width = document.getElementById('modeSelect').offsetWidth + 'px'; }
-    function resizeCanvas() { const w=canvas.clientWidth; canvas.width=w; canvas.height=w; }
-    window.addEventListener('resize',()=>{ resizeCanvas(); adjustStartWidth(); draw(); });
-    mode4Btn.onclick=()=>{ puzzleSize=4; mode4Btn.classList.add('selected'); mode5Btn.classList.remove('selected'); adjustStartWidth(); };
-    mode5Btn.onclick=()=>{ puzzleSize=5; mode5Btn.classList.add('selected'); mode4Btn.classList.remove('selected'); adjustStartWidth(); };
-    startBtn.onclick=startGame;
-    shuffleBtn.onclick=()=>{ initGame(); draw(); };
-    justBtn.onclick=()=>{ bypassRanking=true; showGuestbookModal(); };
-    devBtn.onclick=openDevPrompt;
-    function initGame(){ tiles=[]; emptyPos={r:puzzleSize-1,c:puzzleSize-1}; for(let r=0;r<puzzleSize;r++){ tiles[r]=[]; for(let c=0;c<puzzleSize;c++) tiles[r][c]={r,c}; } tiles[puzzleSize-1][puzzleSize-1]=null; shuffle(); }
-    function shuffle(){ const dirs=[{r:-1,c:0},{r:1,c:0},{r:0,c:-1},{r:0,c:1}]; for(let i=0;i<1000;i++){ const moves=dirs.map(d=>({r:emptyPos.r+d.r,c:emptyPos.c+d.c})).filter(p=>p.r>=0&&p.r<puzzleSize&&p.c>=0&&p.c<puzzleSize); moveTile(...Object.values(moves[Math.floor(Math.random()*moves.length)])); }}
-    function moveTile(r,c){ if((Math.abs(r-emptyPos.r)===1&&c===emptyPos.c)||(Math.abs(c-emptyPos.c)===1&&r===emptyPos.r)){ tiles[emptyPos.r][emptyPos.c]=tiles[r][c]; tiles[r][c]=null; emptyPos={r,c}; }}
-    function draw(){ const w=canvas.width/puzzleSize; ctx.clearRect(0,0,canvas.width,canvas.height); for(let r=0;r<puzzleSize;r++)for(let c=0;c<puzzleSize;c++){ const t=tiles[r][c]; if(t){ ctx.drawImage(img,t.c*img.width/puzzleSize,t.r*img.height/puzzleSize,img.width/puzzleSize,img.height/puzzleSize,c*w,r*w,w,w); ctx.strokeStyle='#f8c8dc';ctx.lineWidth=2;ctx.strokeRect(c*w+1,r*w+1,w-2,w-2); } }}
-    canvas.addEventListener('click',e=>{ const rect=canvas.getBoundingClientRect(), w=canvas.width/puzzleSize; const c=Math.floor((e.clientX-rect.left)/w), r=Math.floor((e.clientY-rect.top)/w); moveTile(r,c); draw(); if(checkComplete()) onComplete(); });
-    function checkComplete(){ return tiles.every((row,r)=>row.every((t,c)=>t?t.r===r&&t.c===c:true)); }
-    function startGame(){ initGame(); draw(); startTime=Date.now(); clearInterval(timerInterval); timerInterval=setInterval(()=>{ document.getElementById('timer').textContent=((Date.now()-startTime)/1000).toFixed(2)+' 초';},100); document.getElementById('message').textContent=''; }
-    function onComplete(){ clearInterval(timerInterval); document.getElementById('message').textContent='🎉 완벽해요! 방명록을 남기고 기록을 자랑해보세요 🎉'; showGuestbookModal(); }
-    function openDevPrompt(){ const code=prompt('개발자 코드 입력'); if(code==='0827'){ initGame(); draw(); onComplete(); } else alert('코드가 틀렸습니다'); }
-    const modal=document.getElementById('guestbookModal'); document.getElementById('gbCancel').onclick=()=>modal.style.display='none'; document.getElementById('gbSubmit').onclick=()=>{
-      const name=document.getElementById('gbName').value.trim(); let msg=document.getElementById('gbMsg').value.trim(); if(!name||!msg) return; msg=msg.substring(0,15);
-      const record=((Date.now()-startTime)/1000).toFixed(2);
-      postEntry({ name, msg, record, skip: bypassRanking }); bypassRanking=false;
-      modal.style.display='none';
-    };
-    function showGuestbookModal(){ modal.style.display='flex'; }
-    function renderGuestbook(){ const ctr=document.getElementById('guestbookList'); ctr.innerHTML=''; entries.sort((a,b)=>new Date(a.time)-new Date(b.time)).forEach(e=>{ const p=document.createElement('p'); p.innerHTML=`<span>${new Date(e.time).toLocaleString()} | ${e.name}: ${e.msg}</span> <button class='deleteBtn' data-id='${e.id}'>삭제</button>`; ctr.append(p); }); document.querySelectorAll('.deleteBtn').forEach(btn=>btn.onclick=async()=>{ const code=prompt('삭제 코드 입력'); if(code!=='0827'){alert('코드가 틀렸습니다');return;} await postEntry({ id:btn.dataset.id, delete:true }); }); }
-    function renderRanking(){ const tbody=document.querySelector('#rankingTable tbody'); tbody.innerHTML=''; entries.filter(e=>!e.skip).sort((a,b)=>e.record-b.record).forEach((e,i)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${i+1}</td><td>${e.name}</td><td>${e.record}</td>`; tbody.append(tr); }); }
-  </script>
+    </script>
 </body>
 </html>
