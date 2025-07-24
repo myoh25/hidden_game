@@ -279,7 +279,7 @@
 
     <script>
         // --- 상수 및 상태 관리 ---
-        const API_URL = 'https://script.google.com/macros/s/AKfycbx0-2MuWWvCqbSfDrPThvuKvMQTfxfwlNL7D4YWOL-OKbwhoxDDxBgyW1Fzj9pdF2HY/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbznB7MOaTKFzagwssPZh5RlUYBrNOwVuVuT6NzjJTLrNMsLBK5ay62wPEkgHv57kVzR/exec';
         const img = new Image();
         img.src = 'https://cdn.jsdelivr.net/gh/myoh25/1/puzzle-hidden.jpg';
 
@@ -359,6 +359,9 @@
         }
 
         function draw() {
+            // state.tiles가 초기화되지 않았으면 함수를 종료하여 오류 방지
+            if (!state.tiles || state.tiles.length === 0) return;
+
             const { canvas, ctx } = DOMElements;
             const w = canvas.width / state.puzzleSize;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -541,8 +544,9 @@
         // --- 이벤트 리스너 설정 ---
         function setupEventListeners() {
             img.onload = () => {
-                resizeCanvas();
+                // 수정된 부분: 게임 데이터를 먼저 만들고, 그 다음에 캔버스를 그립니다.
                 initGame(false);
+                resizeCanvas();
             };
 
             window.addEventListener('resize', resizeCanvas);
