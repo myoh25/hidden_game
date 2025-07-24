@@ -64,12 +64,16 @@
             border: none;
             border-radius: 20px;
             cursor: pointer;
-            transition: transform .2s, box-shadow .2s;
+            transition: transform .2s, box-shadow .2s, background-color .2s;
             font-family: 'Gowun Batang', serif;
         }
-        .btn:hover {
+        .btn:hover:not(:disabled) {
             transform: scale(1.05);
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
         }
 
         .mode-btn {
@@ -162,14 +166,12 @@
             text-align: center;
         }
         
-        /* 로딩 및 에러 메시지 스타일 */
         .status-message {
             text-align: center;
             padding: 1rem;
             color: #888;
         }
 
-        /* 모달 스타일 개선 */
         .modal {
             position: fixed;
             top: 0;
@@ -177,7 +179,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.5);
-            display: none; /* 기본 숨김 */
+            display: none;
             justify-content: center;
             align-items: center;
             z-index: 1000;
@@ -225,7 +227,6 @@
             background: #ccc !important;
         }
         
-        /* 개발자 도구 버튼 숨김 */
         #devBtn { display: none; }
     </style>
 </head>
@@ -238,7 +239,8 @@
             <button class="btn mode-btn selected" data-size="4">고수 (4×4)</button>
             <button class="btn mode-btn" data-size="5">초고수 (5×5)</button>
         </div>
-        <button id="startBtn" class="btn">시작하기</button>
+        <!-- 수정: 시작 버튼을 기본적으로 비활성화하고 로딩 메시지 표시 -->
+        <button id="startBtn" class="btn" disabled>이미지 로딩 중...</button>
     </div>
 
     <div id="timer">00:00.00</div>
@@ -266,7 +268,6 @@
     
     <button id="devBtn">개발자 도구</button>
 
-    <!-- 방명록 작성 모달 -->
     <div id="guestbookModal" class="modal">
         <div class="modal-content">
             <h3>방명록 작성</h3>
@@ -278,9 +279,9 @@
     </div>
 
     <script>
-        // --- 상수 및 상태 관리 ---
         const API_URL = 'https://script.google.com/macros/s/AKfycbznB7MOaTKFzagwssPZh5RlUYBrNOwVuVuT6NzjJTLrNMsLBK5ay62wPEkgHv57kVzR/exec';
         const img = new Image();
+        img.crossOrigin = "Anonymous"; // CORS 이슈 방지를 위해 추가
         img.src = 'https://cdn.jsdelivr.net/gh/myoh25/1/puzzle-hidden.jpg';
 
         const state = {
@@ -293,7 +294,6 @@
             bypassRanking: false,
         };
 
-        // --- DOM 요소 캐싱 ---
         const DOMElements = {
             h1: document.querySelector('h1'),
             canvas: document.getElementById('puzzleCanvas'),
@@ -313,7 +313,6 @@
             modalCloseButtons: document.querySelectorAll('.modal-close'),
         };
 
-        // --- 게임 로직 ---
         function initGame(shuffled = false) {
             state.tiles = [];
             state.emptyPos = { r: state.puzzleSize - 1, c: state.puzzleSize - 1 };
@@ -359,7 +358,6 @@
         }
 
         function draw() {
-            // state.tiles가 초기화되지 않았으면 함수를 종료하여 오류 방지
             if (!state.tiles || state.tiles.length === 0) return;
 
             const { canvas, ctx } = DOMElements;
@@ -417,26 +415,23 @@
             clearInterval(state.timerInterval);
             state.isGameStarted = false;
             DOMElements.message.textContent = '🎉 성공! 도전 완료 🎉';
-            DOMElements.startBtn.textContent = '시작하기';
+            DOMElements.startBtn.textContent = '다시 시작하기';
             DOMElements.startBtn.disabled = false;
             draw();
             showGuestbookModal();
         }
         
-        // --- 개발자 도구 ---
         function openDevPrompt() {
-            const code = prompt('개발자 코드를 입력하세요 (힌트: 오늘부터 1일)');
+            const code = prompt('개발자 코드를 입력하세요 (힌트: 1일)');
             if (code === '0827') {
-                // 테스트를 위해 완료 시퀀스를 즉시 트리거하는 치트키
-                state.isGameStarted = true; // 게임이 시작된 것처럼 설정
-                state.startTime = Date.now() - 10000; // 10초 기록을 가상으로 생성
+                state.isGameStarted = true;
+                state.startTime = Date.now() - 10000;
                 onComplete();
-            } else if (code) { // 코드를 입력했지만 틀렸을 경우
+            } else if (code) {
                 alert('코드가 올바르지 않습니다.');
             }
         }
 
-        // --- UI 및 유틸리티 함수 ---
         function updateTimer() {
             const diff = Date.now() - state.startTime;
             DOMElements.timer.textContent = formatTime(diff);
@@ -467,7 +462,6 @@
             DOMElements.guestbookModal.style.display = 'none';
         }
 
-        // --- 서버 통신 ---
         async function fetchEntries() {
             try {
                 const res = await fetch(API_URL);
@@ -486,11 +480,9 @@
             DOMElements.gbSubmit.textContent = '등록 중...';
             DOMElements.gbSubmit.disabled = true;
             try {
-                const res = await fetch(API_URL, {
+                await fetch(API_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'text/plain;charset=utf-8',
-                    },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(entry)
                 });
                 await fetchEntries();
@@ -504,7 +496,6 @@
             }
         }
 
-        // --- 데이터 렌더링 ---
         function renderGuestbook(entries) {
             const list = DOMElements.guestbookList;
             list.innerHTML = '';
@@ -541,23 +532,27 @@
             });
         }
 
-        // --- 이벤트 리스너 설정 ---
         function setupEventListeners() {
+            // 수정: 이미지 로딩이 끝나면 게임을 초기화하고 시작 버튼을 활성화합니다.
             img.onload = () => {
-                // 수정된 부분: 게임 데이터를 먼저 만들고, 그 다음에 캔버스를 그립니다.
                 initGame(false);
                 resizeCanvas();
+                DOMElements.startBtn.disabled = false;
+                DOMElements.startBtn.textContent = '시작하기';
+            };
+            img.onerror = () => {
+                DOMElements.startBtn.textContent = '이미지 로딩 실패';
+                alert('퍼즐 이미지를 불러오는 데 실패했습니다. 페이지를 새로고침 해주세요.');
             };
 
             window.addEventListener('resize', resizeCanvas);
 
-            // 개발자 도구 호출 (히든 기능)
             let clickCount = 0;
             let clickTimer = null;
             DOMElements.h1.addEventListener('click', () => {
                 clickCount++;
                 if (clickTimer) clearTimeout(clickTimer);
-                clickTimer = setTimeout(() => { clickCount = 0; }, 1500); // 1.5초 안에 5번 클릭
+                clickTimer = setTimeout(() => { clickCount = 0; }, 1500);
 
                 if (clickCount === 5) {
                     clickCount = 0;
@@ -584,7 +579,7 @@
                 DOMElements.message.textContent = '';
                 DOMElements.startBtn.textContent = '시작하기';
                 DOMElements.startBtn.disabled = false;
-                initGame(false);
+                initGame(true); // 다시 섞어서 바로 시작할 수 있도록
             });
 
             DOMElements.canvas.addEventListener('click', (e) => {
@@ -622,7 +617,6 @@
             DOMElements.modalCloseButtons.forEach(btn => btn.addEventListener('click', hideGuestbookModal));
         }
 
-        // --- 초기화 ---
         document.addEventListener('DOMContentLoaded', () => {
             setupEventListeners();
             fetchEntries();
