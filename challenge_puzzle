@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>퍼즐 고수를 위한 도전</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- 고운바탕 폰트 불러오기 -->
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Gowun Batang', serif;
+      background: linear-gradient(135deg, #ffe4e1, #fff0f5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+      margin: 0;
+      position: relative;
+    }
+    h1 { margin-bottom: 1rem; color: #d57fa8; font-size: 1.8rem; }
+    #startBtn, #shuffleBtn {
+      font-family: 'Gowun Batang', serif;
+      padding: .8rem 1.6rem;
+      background: IndianRed; /* 인디언 레드 */
+      color: #fff;
+      border: none;
+      border-radius: 24px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: transform .2s;
+      margin: 0 .5rem;
+    }
+    #startBtn:hover, #shuffleBtn:hover { transform: scale(1.05); }
+    #shuffleBtn { margin-top: 1.5rem; }
+    #devBtn {
+      padding: .6rem 1.2rem;
+      background: #ccc;
+      color: #333;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      position: absolute;
+      bottom: 1rem;
+      right: 1rem;
+      font-family: 'Gowun Batang', serif;
+    }
+    #timer {
+      margin: .8rem 0;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #d57fa8;
+    }
+    #puzzleCanvas {
+      border: 4px solid #f8c8dc;
+      border-radius: 12px;
+      background: #fff;
+    }
+    #message {
+      margin: 1rem 0;
+      color: #d57fa8;
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+    section { width:100%; max-width:360px; margin-top:1.5rem; background:#fff; border-radius:12px; padding:1rem; box-shadow:0 2px 8px rgba(0,0,0,0.05);}    
+    section h2 { margin-bottom:.5rem; font-size:1.2rem; color:#d57fa8; text-align:center; }
+    #guestbookList p { margin:.6rem 0; font-size:1rem; color:#444; display:flex; justify-content:space-between; align-items:center; }
+    .deleteBtn { background:transparent; border:none; color:#e07090; font-size:1rem; cursor:pointer; font-family:'Gowun Batang', serif; }
+    #rankingTable { width:100%; border-collapse:collapse; margin-top:.5rem; }
+    #rankingTable th, #rankingTable td { border:1px solid #eee; padding:.6rem; text-align:center; font-size:.95rem; font-family:'Gowun Batang', serif; }
+    .modal { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(255,255,255,0.9); display:none; justify-content:center; align-items:center; z-index:1000; }
+    .modal-content { background:#fff; padding:1rem; border-radius:12px; display:flex; flex-direction:column; gap:.5rem; width:80%; max-width:320px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+    .modal-content h3 { margin:0; font-size:1.3rem; color:#d57fa8; text-align:center; font-family:'Gowun Batang', serif; }
+    .modal-content input, .modal-content textarea { width:100%; padding:.6rem; border:1px solid #ddd; border-radius:8px; font-size:1rem; font-family:'Gowun Batang', serif; }
+    .modal-content button { padding:.6rem; background:#f8bebe; color:#fff; border:none; border-radius:24px; cursor:pointer; font-size:1rem; font-family:'Gowun Batang', serif; }
+    .modal-close { background:#ccc !important; }
+  </style>
+</head>
+<body>
+  <h1>퍼즐 고수를 위한 도전</h1>
+  <button id="startBtn">시작하기</button>
+  <div id="timer">00:00.00</div>
+  <canvas id="puzzleCanvas" width="360" height="360"></canvas>
+  <div>
+    <button id="shuffleBtn">다시 섞기</button>
+  </div>
+  <div id="message"></div>
+
+  <section id="guestbookSection">
+    <h2>방명록</h2>
+    <div id="guestbookList"></div>
+  </section>
+
+  <section id="rankingSection">
+    <h2>랭킹 리스트</h2>
+    <table id="rankingTable">
+      <thead><tr><th>순위</th><th>이름</th><th>기록(초)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <button id="devBtn">개발자 도구</button>
+
+  <!-- 방명록 모달 -->
+  <div id="guestbookModal" class="modal">
+    <div class="modal-content">
+      <h3>방명록 작성</h3>
+      <input type="text" id="gbName" placeholder="이름 (최대 10자)" maxlength="10">
+      <textarea id="gbMsg" placeholder="메시지 (15자)" maxlength="15"></textarea>
+      <button id="gbSubmit">등록</button>
+      <button id="gbCancel" class="modal-close">취소</button>
+    </div>
+  </div>
+
+  <script>
+    // 퍼즐 이미지 설정
+    const img = new Image();
+    img.src = 'https://cdn.jsdelivr.net/gh/myoh25/1/puzzle-hidden.jpg';
+
+    const size = 5;
+    const canvas = document.getElementById('puzzleCanvas');
+    const ctx = canvas.getContext('2d');
+    let tiles = [], emptyPos = {r:size-1,c:size-1};
+    let timerInterval, startTime;
+    const entries = [];
+
+    document.getElementById('startBtn').onclick = startGame;
+    document.getElementById('shuffleBtn').onclick = () => { initTiles(); emptyPos={r:size-1,c:size-1}; shuffle(); draw(); };
+    document.getElementById('devBtn').onclick = openDevPrompt;
+
+    function initTiles(){
+      tiles=[];
+      for(let r=0;r<size;r++){ tiles[r]=[];
+        for(let c=0;c<size;c++) tiles[r][c]={r,c};
+      }
+      tiles[size-1][size-1]=null;
+    }
+
+    function shuffle(){
+      const dirs=[{r:-1,c:0},{r:1,c:0},{r:0,c:-1},{r:0,c:1}];
+      for(let i=0;i<1000;i++){
+        const moves=dirs.map(d=>({r:emptyPos.r+d.r,c:emptyPos.c+d.c}))
+                       .filter(p=>p.r>=0&&p.r<size&&p.c>=0&&p.c<size);
+        const mv=moves[Math.floor(Math.random()*moves.length)]; moveTile(mv.r,mv.c);
+      }
+    }
+
+    function draw(){
+      const w=canvas.width/size;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      for(let r=0;r<size;r++)for(let c=0;c<size;c++){
+        const t=tiles[r][c];
+        if(t){
+          ctx.drawImage(
+            img,
+            t.c * img.width/size, t.r * img.height/size,
+            img.width/size, img.height/size,
+            c * w, r * w, w, w
+          );
+          ctx.strokeStyle='#f8c8dc'; ctx.lineWidth=2;
+          ctx.strokeRect(c*w+1, r*w+1, w-2, w-2);
+        }
+      }
+    }
+
+    function moveTile(r,c){
+      if((Math.abs(r-emptyPos.r)===1&&c===emptyPos.c)||(Math.abs(c-emptyPos.c)===1&&r===emptyPos.r)){
+        tiles[emptyPos.r][emptyPos.c]=tiles[r][c]; tiles[r][c]=null;
+        emptyPos={r,c};
+      }
+    }
+
+   	canvas.onclick=e=>{
+      const rect=canvas.getBoundingClientRect(),w=canvas.width/size;
+      const c=Math.floor((e.clientX-rect.left)/w),r=Math.floor((e.clientY-rect.top)/w);
+      moveTile(r,c);draw();if(checkComplete())onComplete();
+    };
+
+    function checkComplete(){
+      return tiles.every((row,r)=>row.every((t,c)=>t?t.r===r&&t.c===c:true));
+    }
+
+    function startGame(){
+      initTiles();
+      emptyPos={r:size-1,c:size-1};
+      shuffle();
+      draw();                            // 이미지 조각 즉시 그리기
+      startTime=Date.now();
+      clearInterval(timerInterval);
+      timerInterval=setInterval(()=>{
+        const diff=(Date.now()-startTime)/1000;
+        document.getElementById('timer').textContent=diff.toFixed(2)+' 초';
+      },100);
+      document.getElementById('message').textContent='';
+    }
+
+    function onComplete(){
+      clearInterval(timerInterval);
+      document.getElementById('message').textContent='🎉 성공! 도전 완료 🎉';
+      showGuestbookModal();
+    }
+
+    function openDevPrompt(){
+      const code=prompt('개발자 코드 입력');
+      if(code==='0827'){ initTiles();draw();onComplete(); }
+      else alert('코드가 틀렸습니다');
+    }
+
+    const modal=document.getElementById('guestbookModal');
+    document.getElementById('gbCancel').onclick=()=>modal.style.display='none';
+    document.getElementById('gbSubmit').onclick=()=>{
+      const name=document.getElementById('gbName').value.trim();
+      let msg=document.getElementById('gbMsg').value.trim();if(!name||!msg) return;
+      msg=msg.substring(0,15);
+      const record=((Date.now()-startTime)/1000).toFixed(2);
+      entries.push({id:Date.now(),name,msg,record,time:Date.now()});
+      renderGuestbook();renderRanking();modal.style.display='none';
+    };
+
+    function showGuestbookModal(){modal.style.display='flex';}
+    function renderGuestbook(){
+      const ctr=document.getElementById('guestbookList');ctr.innerHTML='';
+      entries.sort((a,b)=>a.time-b.time).forEach(e=>{
+        const p=document.createElement('p');
+        p.innerHTML=`<span>${new Date(e.time).toLocaleString()} | ${e.name}: ${e.msg}</span>`+
+                    ` <button class='deleteBtn' data-id='${e.id}'>삭제</button>`;
+        ctr.append(p);
+      });
+      document.querySelectorAll('.deleteBtn').forEach(btn=>btn.onclick=()=>{
+        const code=prompt('삭제 코드 입력');if(code!=='0827'){alert('코드가 틀렸습니다');return;}
+        const id=Number(btn.dataset.id);const idx=entries.findIndex(en=>en.id===id);
+        if(idx>-1){entries.splice(idx,1);renderGuestbook();renderRanking();}
+      });
+    }
+    function renderRanking(){
+      const tbody=document.querySelector('#rankingTable tbody');tbody.innerHTML='';
+      entries.sort((a,b)=>a.record-b.record).forEach((e,i)=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${i+1}</td><td>${e.name}</td><td>${e.record}</td>`;
+        tbody.append(tr);
+      });
+    }
+  </script>
+</body>
+</html>
