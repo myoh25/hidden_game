@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>퍼즐 고수를 위한 도전</title>
+    <title>😎퍼즐 고수를 위한 도전</title>
     <!-- Gowun Batang Font -->
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang&display=swap" rel="stylesheet">
     <style>
@@ -36,6 +36,7 @@
             color: var(--primary-color);
             font-size: 1.8rem;
             text-shadow: 1px 1px 2px var(--white-color);
+            cursor: pointer; /* 클릭 가능함을 암시 */
         }
 
         /* 컨트롤 영역 레이아웃 개선 */
@@ -278,9 +279,9 @@
 
     <script>
         // --- 상수 및 상태 관리 ---
-        const API_URL = 'https://script.google.com/macros/s/AKfycbwiaJZx-i7jleHhLLPLgsBOvT308q0iTvgUamNwL6K47fwhiaEszitRW49TOGA6u1He/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzUDSf8o_AJy1tgEfPRrTDmvm-2Jz-LKpkNqp1KTkfNwJsFBoYqeiE5c7Iq6bmJEeld/exec';
         const img = new Image();
-        img.src = 'https://cdn.jsdelivr.net/gh/myoh25/1/puzzle-hidden.jpg';
+        img.src = 'https://cdn.jsdelivr.net/gh/myoh25/1/puzzle300.png';
 
         const state = {
             puzzleSize: 4,
@@ -294,6 +295,7 @@
 
         // --- DOM 요소 캐싱 ---
         const DOMElements = {
+            h1: document.querySelector('h1'),
             canvas: document.getElementById('puzzleCanvas'),
             ctx: document.getElementById('puzzleCanvas').getContext('2d'),
             modeButtons: document.querySelectorAll('.mode-btn'),
@@ -337,7 +339,6 @@
                     .map(d => ({ r: state.emptyPos.r + d.r, c: state.emptyPos.c + d.c }))
                     .filter(p => p.r >= 0 && p.r < state.puzzleSize && p.c >= 0 && p.c < state.puzzleSize);
                 const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
-                // moveTile은 빈 칸의 '이웃'을 클릭했을 때의 로직이므로, 여기서는 직접 위치를 바꿉니다.
                 state.tiles[state.emptyPos.r][state.emptyPos.c] = state.tiles[randomMove.r][randomMove.c];
                 state.tiles[randomMove.r][randomMove.c] = null;
                 state.emptyPos = randomMove;
@@ -346,7 +347,6 @@
 
         function moveTile(r, c) {
             if (!state.isGameStarted) return;
-            // 빈 칸과 인접한지 확인 (맨해튼 거리 1)
             if (Math.abs(r - state.emptyPos.r) + Math.abs(c - state.emptyPos.c) === 1) {
                 state.tiles[state.emptyPos.r][state.emptyPos.c] = state.tiles[r][c];
                 state.tiles[r][c] = null;
@@ -401,7 +401,7 @@
         function startGame() {
             state.isGameStarted = true;
             DOMElements.message.textContent = '';
-            initGame(true); // 섞어서 게임 시작
+            initGame(true);
             
             state.startTime = Date.now();
             clearInterval(state.timerInterval);
@@ -416,8 +416,21 @@
             DOMElements.message.textContent = '🎉 성공! 도전 완료 🎉';
             DOMElements.startBtn.textContent = '시작하기';
             DOMElements.startBtn.disabled = false;
-            draw(); // 완성된 그림을 다시 한번 그려줌
+            draw();
             showGuestbookModal();
+        }
+        
+        // --- 개발자 도구 ---
+        function openDevPrompt() {
+            const code = prompt('개발자 코드를 입력하세요 (힌트: 0827)');
+            if (code === '0827') {
+                // 테스트를 위해 완료 시퀀스를 즉시 트리거하는 치트키
+                state.isGameStarted = true; // 게임이 시작된 것처럼 설정
+                state.startTime = Date.now() - 10000; // 10초 기록을 가상으로 생성
+                onComplete();
+            } else if (code) { // 코드를 입력했지만 틀렸을 경우
+                alert('코드가 올바르지 않습니다.');
+            }
         }
 
         // --- UI 및 유틸리티 함수 ---
@@ -472,15 +485,15 @@
             try {
                 const res = await fetch(API_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // GAS 웹앱 POST 시 필요
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8',
+                    },
                     body: JSON.stringify(entry)
                 });
-                // no-cors 모드에서는 응답을 읽을 수 없으므로, 성공으로 간주하고 데이터를 다시 불러옴
                 await fetchEntries();
             } catch (e) {
                 console.error('데이터 전송 실패:', e);
-                alert('등록에 실패했습니다. 다시 시도해주세요.'); // alert 대신 커스텀 모달로 개선 가능
+                alert('등록에 실패했습니다. 다시 시도해주세요.');
             } finally {
                 hideGuestbookModal();
                 DOMElements.gbSubmit.textContent = '등록';
@@ -492,11 +505,10 @@
         function renderGuestbook(entries) {
             const list = DOMElements.guestbookList;
             list.innerHTML = '';
-            if (!entries || entries.length === 0) {
+            if (!entries || !Array.isArray(entries) || entries.length === 0) {
                 list.innerHTML = `<p class="status-message">아직 방명록이 없어요.</p>`;
                 return;
             }
-            // 최신순으로 정렬
             [...entries].sort((a, b) => new Date(b.time) - new Date(a.time)).forEach(e => {
                 const p = document.createElement('p');
                 const date = new Date(e.time).toLocaleString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -508,6 +520,10 @@
         function renderRanking(entries) {
             const tbody = DOMElements.rankingBody;
             tbody.innerHTML = '';
+             if (!entries || !Array.isArray(entries) || entries.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="status-message">아직 랭킹 기록이 없어요.</td></tr>`;
+                return;
+            }
             const rankedEntries = entries.filter(e => !e.skip && e.record);
             
             if (rankedEntries.length === 0) {
@@ -526,10 +542,25 @@
         function setupEventListeners() {
             img.onload = () => {
                 resizeCanvas();
-                initGame(false); // 처음에는 섞지 않은 상태로 시작
+                initGame(false);
             };
 
             window.addEventListener('resize', resizeCanvas);
+
+            // 개발자 도구 호출 (히든 기능)
+            let clickCount = 0;
+            let clickTimer = null;
+            DOMElements.h1.addEventListener('click', () => {
+                clickCount++;
+                if (clickTimer) clearTimeout(clickTimer);
+                clickTimer = setTimeout(() => { clickCount = 0; }, 1500); // 1.5초 안에 5번 클릭
+
+                if (clickCount === 5) {
+                    clickCount = 0;
+                    clearTimeout(clickTimer);
+                    openDevPrompt();
+                }
+            });
 
             DOMElements.modeButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -549,7 +580,7 @@
                 DOMElements.message.textContent = '';
                 DOMElements.startBtn.textContent = '시작하기';
                 DOMElements.startBtn.disabled = false;
-                initGame(false); // 다시 섞지 않은 상태로 초기화
+                initGame(false);
             });
 
             DOMElements.canvas.addEventListener('click', (e) => {
@@ -564,6 +595,7 @@
             
             DOMElements.justGuestbookBtn.addEventListener('click', () => {
                 state.bypassRanking = true;
+                state.startTime = Date.now(); 
                 showGuestbookModal();
             });
 
@@ -575,10 +607,12 @@
                     return;
                 }
                 
-                const record = state.isGameStarted || state.bypassRanking ? ((Date.now() - state.startTime) / 1000).toFixed(2) : 0;
+                const record = (state.isGameStarted === false && state.bypassRanking === false) 
+                               ? ((Date.now() - state.startTime) / 1000).toFixed(2) 
+                               : 0;
                 
-                postEntry({ name, msg, record, skip: state.bypassRanking });
-                state.bypassRanking = false; // 상태 초기화
+                postEntry({ name, msg, record: state.bypassRanking ? 0 : record, skip: state.bypassRanking });
+                state.bypassRanking = false;
             });
 
             DOMElements.modalCloseButtons.forEach(btn => btn.addEventListener('click', hideGuestbookModal));
