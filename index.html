@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>퍼즐 고수를 위한 도전</title>
-    <!-- Gowun Batang Font -->
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -15,7 +14,7 @@
             --text-color: #743388;
             --white-color: #fff;
             --dark-color: #000;
-            --magic-color: #9b59b6; /* 마법봉 버튼 색상 */
+            --magic-color: #9b59b6;
         }
 
         body {
@@ -135,7 +134,6 @@
             transition: box-shadow 0.3s ease;
         }
         
-        /* 마법 모드 활성화 시 캔버스에 적용될 스타일 */
         #puzzleCanvas.magic-wand-active {
             box-shadow: 0 0 15px 5px #f1c40f;
         }
@@ -201,17 +199,18 @@
 
         .modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5); display: none;
+            background: rgba(0, 0, 0, 0.6); display: none;
             justify-content: center; align-items: center; z-index: 1000; padding: 1rem;
         }
 
         .modal-content {
             background: var(--white-color); padding: 1.5rem; border-radius: 12px;
             display: flex; flex-direction: column; gap: .75rem;
-            width: 90%; max-width: 320px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            width: 90%; max-width: 340px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            text-align: center;
         }
 
-        .modal-content h3 { margin: 0; text-align: center; color: var(--primary-color); }
+        .modal-content h3 { margin: 0 0 .5rem 0; text-align: center; color: var(--primary-color); }
 
         .modal-content input, .modal-content textarea {
             font-family: 'Gowun Batang', serif; padding: 0.5rem; border-radius: 8px;
@@ -221,6 +220,31 @@
         .modal-content button { padding: 0.75rem; font-size: 1rem; }
         #gbSubmit { background-color: var(--primary-color); color: var(--white-color); }
         .modal-close { background: #ccc !important; }
+        
+        /* ✨[CSS 추가] 시작 팝업 안내문 스타일 */
+        #initialChoiceModal .choice-option {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: .5rem;
+        }
+        #initialChoiceModal .choice-option .description {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: .5rem;
+            margin-bottom: 0;
+        }
+        #initialChoiceModal button {
+            width: 100%;
+        }
+
+        /* ✨[CSS 추가] 방명록 팝업 안내문 스타일 */
+        #gbInfoText {
+            font-size: 0.9rem;
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
         #devBtn { display: none; }
     </style>
 </head>
@@ -266,9 +290,24 @@
     
     <button id="devBtn">개발자 도구</button>
 
+    <div id="initialChoiceModal" class="modal">
+        <div class="modal-content">
+            <h3>어떻게 즐겨볼까요? 🤔</h3>
+            <div class="choice-option">
+                <button id="choicePuzzleBtn" class="btn">퍼즐 풀고 랭킹 도전! 🔥</button>
+                <p class="description">퍼즐을 완성하고, 방명록에 이름을 남겨 명예의 전당에 기록을 세워보세요!</p>
+            </div>
+             <div class="choice-option">
+                <button id="choiceGuestbookBtn" class="btn">방명록만 남길래요 ✍️</button>
+                <p class="description">퍼즐은 나중에! 따뜻한 응원 메시지를 남겨주세요.</p>
+            </div>
+        </div>
+    </div>
+
     <div id="guestbookModal" class="modal">
         <div class="modal-content">
-            <h3>방명록 작성</h3>
+            <h3 id="gbTitle">방명록 작성</h3>
+            <p id="gbInfoText"></p>
             <input type="text" id="gbName" placeholder="이름 (최대 10자)" maxlength="10">
             <textarea id="gbMsg" placeholder="메시지 (최대 15자)" maxlength="15" rows="3"></textarea>
             <button id="gbSubmit" class="btn">등록</button>
@@ -289,15 +328,9 @@
         img.src = CONFIG.IMAGE_URL;
 
         const state = {
-            puzzleSize: 4,
-            tiles: [],
-            emptyPos: { r: 0, c: 0 },
-            isGameStarted: false,
-            startTime: 0,
-            timerInterval: null,
-            bypassRanking: false,
-            magicWandUses: 3,
-            isMagicWandActive: false,
+            puzzleSize: 4, tiles: [], emptyPos: { r: 0, c: 0 },
+            isGameStarted: false, startTime: 0, timerInterval: null,
+            bypassRanking: false, magicWandUses: 3, isMagicWandActive: false,
             firstSelectedTile: null,
         };
 
@@ -319,20 +352,23 @@
             gbMsg: document.getElementById('gbMsg'),
             gbSubmit: document.getElementById('gbSubmit'),
             modalCloseButtons: document.querySelectorAll('.modal-close'),
+            initialChoiceModal: document.getElementById('initialChoiceModal'),
+            // ✨[JS 변경] 시작 팝업 버튼 DOM 요소 변경
+            choicePuzzleBtn: document.getElementById('choicePuzzleBtn'),
+            choiceGuestbookBtn: document.getElementById('choiceGuestbookBtn'),
+            // ✨[JS 추가] 방명록 팝업 안내문 DOM 요소 추가
+            gbTitle: document.getElementById('gbTitle'),
+            gbInfoText: document.getElementById('gbInfoText'),
         };
 
         function initGame(shuffled = false) {
             state.tiles = [];
             state.emptyPos = { r: state.puzzleSize - 1, c: state.puzzleSize - 1 };
-            
             for (let r = 0; r < state.puzzleSize; r++) {
                 state.tiles[r] = [];
-                for (let c = 0; c < state.puzzleSize; c++) {
-                    state.tiles[r][c] = { r, c };
-                }
+                for (let c = 0; c < state.puzzleSize; c++) { state.tiles[r][c] = { r, c }; }
             }
             state.tiles[state.puzzleSize - 1][state.puzzleSize - 1] = null;
-
             if (shuffled) shuffle();
             draw();
         }
@@ -340,20 +376,16 @@
         function shuffle() {
             const dirs = [{ r: -1, c: 0 }, { r: 1, c: 0 }, { r: 0, c: -1 }, { r: 0, c: 1 }];
             for (let i = 0; i < 1000; i++) {
-                const validMoves = dirs
-                    .map(d => ({ r: state.emptyPos.r + d.r, c: state.emptyPos.c + d.c }))
-                    .filter(p => p.r >= 0 && p.r < state.puzzleSize && p.c >= 0 && p.c < state.puzzleSize);
+                const validMoves = dirs.map(d => ({ r: state.emptyPos.r + d.r, c: state.emptyPos.c + d.c })).filter(p => p.r >= 0 && p.r < state.puzzleSize && p.c >= 0 && p.c < state.puzzleSize);
                 const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
-                state.tiles[state.emptyPos.r][state.emptyPos.c] = state.tiles[randomMove.r][randomMove.c];
-                state.tiles[randomMove.r][randomMove.c] = null;
+                [state.tiles[state.emptyPos.r][state.emptyPos.c], state.tiles[randomMove.r][randomMove.c]] = [state.tiles[randomMove.r][randomMove.c], null];
                 state.emptyPos = randomMove;
             }
         }
 
         function moveTile(r, c) {
             if (Math.abs(r - state.emptyPos.r) + Math.abs(c - state.emptyPos.c) === 1) {
-                state.tiles[state.emptyPos.r][state.emptyPos.c] = state.tiles[r][c];
-                state.tiles[r][c] = null;
+                [state.tiles[state.emptyPos.r][state.emptyPos.c], state.tiles[r][c]] = [state.tiles[r][c], null];
                 state.emptyPos = { r, c };
                 draw();
                 if (checkComplete()) onComplete();
@@ -362,7 +394,6 @@
         
         function handleMagicWandClick(r, c) {
             if (state.tiles[r][c] === null) return;
-
             if (!state.firstSelectedTile) {
                 state.firstSelectedTile = { r, c };
                 draw();
@@ -372,20 +403,14 @@
                     draw();
                     return;
                 }
-
                 const first = state.firstSelectedTile;
-                const tempTile = state.tiles[first.r][first.c];
-                state.tiles[first.r][first.c] = state.tiles[r][c];
-                state.tiles[r][c] = tempTile;
-
+                [state.tiles[first.r][first.c], state.tiles[r][c]] = [state.tiles[r][c], state.tiles[first.r][first.c]];
                 state.magicWandUses--;
                 state.isMagicWandActive = false;
                 state.firstSelectedTile = null;
-
                 DOMElements.canvas.classList.remove('magic-wand-active');
                 DOMElements.magicWandBtn.textContent = `✨ 마법봉 (${state.magicWandUses}/3)`;
                 if (state.magicWandUses <= 0) DOMElements.magicWandBtn.disabled = true;
-
                 draw();
                 if (checkComplete()) onComplete();
             }
@@ -396,7 +421,6 @@
             const { canvas, ctx } = DOMElements;
             const w = canvas.width / state.puzzleSize;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             for (let r = 0; r < state.puzzleSize; r++) {
                 for (let c = 0; c < state.puzzleSize; c++) {
                     const tile = state.tiles[r][c];
@@ -405,7 +429,6 @@
                         ctx.strokeStyle = '#f8c8dc';
                         ctx.lineWidth = 2;
                         ctx.strokeRect(c * w + 1, r * w + 1, w - 2, w - 2);
-                        
                         if (state.isMagicWandActive && state.firstSelectedTile && state.firstSelectedTile.r === r && state.firstSelectedTile.c === c) {
                             ctx.strokeStyle = '#f1c40f';
                             ctx.lineWidth = 4;
@@ -421,11 +444,8 @@
             for (let r = 0; r < state.puzzleSize; r++) {
                 for (let c = 0; c < state.puzzleSize; c++) {
                     const tile = state.tiles[r][c];
-                    if (r === state.puzzleSize - 1 && c === state.puzzleSize - 1) {
-                        if (tile !== null) return false;
-                    } else {
-                        if (!tile || tile.r !== r || tile.c !== c) return false;
-                    }
+                    if (r === state.puzzleSize - 1 && c === state.puzzleSize - 1) { if (tile !== null) return false; } 
+                    else { if (!tile || tile.r !== r || tile.c !== c) return false; }
                 }
             }
             return true;
@@ -435,7 +455,6 @@
             state.isGameStarted = true;
             DOMElements.message.textContent = '';
             initGame(true);
-            
             state.startTime = Date.now();
             clearInterval(state.timerInterval);
             state.timerInterval = setInterval(updateTimer, 10);
@@ -450,7 +469,6 @@
             state.isMagicWandActive = false;
             state.firstSelectedTile = null;
             state.magicWandUses = 3;
-
             DOMElements.timer.textContent = '00:00.00';
             DOMElements.message.textContent = '';
             DOMElements.startBtn.textContent = '시작하기';
@@ -471,7 +489,7 @@
             DOMElements.magicWandBtn.disabled = true;
             DOMElements.canvas.classList.remove('magic-wand-active');
             draw();
-            showGuestbookModal();
+            showGuestbookModal(true); // ✨[JS 변경] 퍼즐 성공 후 호출함을 알림
         }
         
         function openDevPrompt() {
@@ -480,9 +498,7 @@
                 state.isGameStarted = true;
                 state.startTime = Date.now() - 10000;
                 onComplete();
-            } else if (code) {
-                alert('코드가 올바르지 않습니다.');
-            }
+            } else if (code) { alert('코드가 올바르지 않습니다.'); }
         }
 
         function updateTimer() {
@@ -505,15 +521,24 @@
             draw();
         }
 
-        function showGuestbookModal() {
+        // ✨[JS 변경] 방명록 팝업 함수 기능 개선
+        function showGuestbookModal(isAfterCompletion = false) {
+            if (isAfterCompletion) {
+                DOMElements.gbTitle.textContent = '🎉 도전 성공! 랭킹 등록 🏆';
+                DOMElements.gbInfoText.textContent = '이름과 메시지를 남기면 기록이 자동으로 등록됩니다. (취소 시 기록 증발! 💨)';
+                DOMElements.gbInfoText.style.display = 'block';
+            } else {
+                DOMElements.gbTitle.textContent = '방명록 작성';
+                DOMElements.gbInfoText.style.display = 'none';
+            }
             DOMElements.guestbookModal.style.display = 'flex';
             DOMElements.gbName.value = '';
             DOMElements.gbMsg.value = '';
         }
 
-        function hideGuestbookModal() {
-            DOMElements.guestbookModal.style.display = 'none';
-        }
+        function hideGuestbookModal() { DOMElements.guestbookModal.style.display = 'none'; }
+        function showInitialChoiceModal() { DOMElements.initialChoiceModal.style.display = 'flex'; }
+        function hideInitialChoiceModal() { DOMElements.initialChoiceModal.style.display = 'none'; }
 
         async function fetchEntries() {
             try {
@@ -533,11 +558,7 @@
             DOMElements.gbSubmit.textContent = '등록 중...';
             DOMElements.gbSubmit.disabled = true;
             try {
-                await fetch(CONFIG.API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(entry)
-                });
+                await fetch(CONFIG.API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(entry) });
                 await fetchEntries();
             } catch (e) {
                 console.error('데이터 전송 실패:', e);
@@ -552,10 +573,7 @@
         function renderGuestbook(entries) {
             const list = DOMElements.guestbookList;
             list.innerHTML = '';
-            if (!entries || !Array.isArray(entries) || entries.length === 0) {
-                list.innerHTML = `<p class="status-message">아직 방명록이 없어요.</p>`;
-                return;
-            }
+            if (!entries || !Array.isArray(entries) || entries.length === 0) { list.innerHTML = `<p class="status-message">아직 방명록이 없어요.</p>`; return; }
             [...entries].sort((a, b) => new Date(b.time) - new Date(a.time)).forEach(e => {
                 const p = document.createElement('p');
                 const date = new Date(e.time).toLocaleString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -567,17 +585,9 @@
         function renderRanking(entries) {
             const tbody = DOMElements.rankingBody;
             tbody.innerHTML = '';
-             if (!entries || !Array.isArray(entries) || entries.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="status-message">아직 랭킹 기록이 없어요.</td></tr>`;
-                return;
-            }
+            if (!entries || !Array.isArray(entries) || entries.length === 0) { tbody.innerHTML = `<tr><td colspan="3" class="status-message">아직 랭킹 기록이 없어요.</td></tr>`; return; }
             const rankedEntries = entries.filter(e => !e.skip && e.record);
-            
-            if (rankedEntries.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="status-message">아직 랭킹 기록이 없어요.</td></tr>`;
-                return;
-            }
-
+            if (rankedEntries.length === 0) { tbody.innerHTML = `<tr><td colspan="3" class="status-message">아직 랭킹 기록이 없어요.</td></tr>`; return; }
             rankedEntries.sort((a, b) => parseFloat(a.record) - parseFloat(b.record)).forEach((e, i) => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `<td>${i + 1}</td><td>${e.name}</td><td>${e.record}</td>`;
@@ -586,32 +596,14 @@
         }
 
         function setupEventListeners() {
-            img.onload = () => {
-                initGame(false);
-                resizeCanvas();
-                DOMElements.startBtn.disabled = false;
-                DOMElements.startBtn.textContent = '시작하기';
-                DOMElements.modeButtons.forEach(btn => btn.disabled = false);
-            };
-            img.onerror = () => {
-                DOMElements.startBtn.textContent = '이미지 로딩 실패';
-                alert('퍼즐 이미지를 불러오는 데 실패했습니다. 페이지를 새로고침 해주세요.');
-            };
-
+            img.onload = () => { initGame(false); resizeCanvas(); DOMElements.startBtn.disabled = false; DOMElements.startBtn.textContent = '시작하기'; DOMElements.modeButtons.forEach(btn => btn.disabled = false); };
+            img.onerror = () => { DOMElements.startBtn.textContent = '이미지 로딩 실패'; alert('퍼즐 이미지를 불러오는 데 실패했습니다. 페이지를 새로고침 해주세요.'); };
             window.addEventListener('resize', resizeCanvas);
-
-            let clickCount = 0;
-            let clickTimer = null;
+            let clickCount = 0; let clickTimer = null;
             DOMElements.h1.addEventListener('click', () => {
-                clickCount++;
-                if (clickTimer) clearTimeout(clickTimer);
+                clickCount++; if (clickTimer) clearTimeout(clickTimer);
                 clickTimer = setTimeout(() => { clickCount = 0; }, 1500);
-
-                if (clickCount === 5) {
-                    clickCount = 0;
-                    clearTimeout(clickTimer);
-                    openDevPrompt();
-                }
+                if (clickCount === 5) { clickCount = 0; clearTimeout(clickTimer); openDevPrompt(); }
             });
 
             DOMElements.modeButtons.forEach(btn => {
@@ -625,71 +617,49 @@
             });
 
             DOMElements.startBtn.addEventListener('click', startGame);
-            
-            DOMElements.restartBtn.addEventListener('click', () => {
-                resetGame();
-                initGame(true);
-            });
-
+            DOMElements.restartBtn.addEventListener('click', () => { resetGame(); initGame(true); });
             DOMElements.magicWandBtn.addEventListener('click', () => {
                 if (!state.isGameStarted || state.magicWandUses <= 0) return;
-                state.isMagicWandActive = !state.isMagicWandActive;
-                state.firstSelectedTile = null;
-
-                if (state.isMagicWandActive) {
-                    DOMElements.canvas.classList.add('magic-wand-active');
-                    DOMElements.magicWandBtn.textContent = '취소';
-                } else {
-                    DOMElements.canvas.classList.remove('magic-wand-active');
-                    DOMElements.magicWandBtn.textContent = `✨ 마법봉 (${state.magicWandUses}/3)`;
-                }
+                state.isMagicWandActive = !state.isMagicWandActive; state.firstSelectedTile = null;
+                DOMElements.canvas.classList.toggle('magic-wand-active', state.isMagicWandActive);
+                DOMElements.magicWandBtn.textContent = state.isMagicWandActive ? '취소' : `✨ 마법봉 (${state.magicWandUses}/3)`;
                 draw();
             });
 
             DOMElements.canvas.addEventListener('click', (e) => {
                 if (!state.isGameStarted) return;
                 const rect = DOMElements.canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+                const x = e.clientX - rect.left; const y = e.clientY - rect.top;
                 const tileSize = DOMElements.canvas.width / state.puzzleSize;
-                const c = Math.floor(x / tileSize);
-                const r = Math.floor(y / tileSize);
-                
-                if (state.isMagicWandActive) {
-                    handleMagicWandClick(r, c);
-                } else {
-                    moveTile(r, c);
-                }
+                const c = Math.floor(x / tileSize); const r = Math.floor(y / tileSize);
+                if (state.isMagicWandActive) { handleMagicWandClick(r, c); } else { moveTile(r, c); }
             });
             
-            DOMElements.justGuestbookBtn.addEventListener('click', () => {
-                state.bypassRanking = true;
-                state.startTime = Date.now(); 
-                showGuestbookModal();
-            });
+            DOMElements.justGuestbookBtn.addEventListener('click', () => { state.bypassRanking = true; state.startTime = Date.now(); showGuestbookModal(); });
 
             DOMElements.gbSubmit.addEventListener('click', () => {
-                const name = DOMElements.gbName.value.trim();
-                const msg = DOMElements.gbMsg.value.trim();
-                if (!name || !msg) {
-                    alert('이름과 메시지를 모두 입력해주세요.');
-                    return;
-                }
-                
-                const record = (state.isGameStarted === false && state.bypassRanking === false) 
-                               ? ((Date.now() - state.startTime) / 1000).toFixed(2) 
-                               : 0;
-                
+                const name = DOMElements.gbName.value.trim(); const msg = DOMElements.gbMsg.value.trim();
+                if (!name || !msg) { alert('이름과 메시지를 모두 입력해주세요.'); return; }
+                const record = (state.isGameStarted === false && state.bypassRanking === false) ? ((Date.now() - state.startTime) / 1000).toFixed(2) : 0;
                 postEntry({ name, msg, record: state.bypassRanking ? 0 : record, skip: state.bypassRanking });
                 state.bypassRanking = false;
             });
 
             DOMElements.modalCloseButtons.forEach(btn => btn.addEventListener('click', hideGuestbookModal));
+            
+            // ✨[JS 변경] 시작 팝업 이벤트 리스너 변경
+            DOMElements.choicePuzzleBtn.addEventListener('click', hideInitialChoiceModal);
+            DOMElements.choiceGuestbookBtn.addEventListener('click', () => {
+                hideInitialChoiceModal();
+                state.bypassRanking = true;
+                showGuestbookModal();
+            });
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             setupEventListeners();
             fetchEntries();
+            showInitialChoiceModal();
         });
     </script>
 </body>
